@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "bunVersion": "1.x",
+  "framework": "vite",
+  "functions": {
+    "api/analyze.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  }
+}

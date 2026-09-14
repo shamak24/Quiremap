@@ -1,0 +1,16 @@
+{
+  "name": "Codebase Explainer",
+  "short_name": "Explainer",
+  "description": "Architecture briefings from public GitHub repositories.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09080c",
+  "theme_color": "#09080c",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
