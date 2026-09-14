@@ -160,9 +160,14 @@ The endpoint is throttled at **6 requests per IP per 10 minutes** (in-memory, pe
 
 ## Deploy (Vercel)
 
-1. Push the repo and import the project in Vercel (framework: Vite, Bun install).
-2. Set `GEMINI_API_KEY` for Production and Preview. Optionally set `GITHUB_TOKEN`.
-3. Deploy. `api/analyze.ts` runs with `maxDuration` 60s.
+1. Import the GitHub repo in Vercel (framework Vite, install with Bun is fine).
+2. **Environment variables** (Project → Settings → Environment Variables):
+   - `GEMINI_API_KEY` — Production **and** Preview. Server-side only. Do **not** name it `VITE_GEMINI_API_KEY`.
+   - `GITHUB_TOKEN` — optional, for server-side GitHub fetches.
+3. Redeploy after saving env vars (they are not picked up by an already-built deployment).
+4. Smoke-check the function: open `https://your-app.vercel.app/api/analyze` in a browser. You should see JSON like `{ "ok": true, "hasGeminiKey": true }`. If `hasGeminiKey` is `false`, the key is not visible to the function.
+
+The SPA rewrite in `vercel.json` skips `/api/*` so Vite does not swallow the function.
 
 ## Limits and privacy
 
