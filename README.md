@@ -35,7 +35,7 @@ flowchart LR
 2. It loads repo metadata and the recursive git tree from GitHub’s REST API (**2 calls**). File bodies come from `raw.githubusercontent.com` and **do not** count against the REST 60/hour cap.
 3. A heuristic picks README, manifests, entrypoints, and a scored slice of source.
 4. That payload is posted to `POST /api/analyze`. If the browser is GitHub-rate-limited, the client sends `{ repoUrl, fetchOnServer: true }` and the server fetches GitHub instead.
-5. The server calls Gemini (`gemini-3.6-flash`, then `gemini-3.8-flash` / `gemini-3.5-flash` if needed), asks for JSON (summary, components, nodes + edges), validates the graph, and returns the briefing.
+5. The server calls Gemini (`gemini-3.1-flash-lite`, then `gemini-3.6-flash` / `gemini-3.5-flash` if needed), asks for JSON (summary, components, nodes + edges), validates the graph, and returns the briefing.
 6. The UI renders typography + a d3-force graph. **Download PDF** draws a document with jsPDF.
 
 The Gemini key is read only on the server (`api/analyze.ts` on Vercel, Vite middleware locally). Never prefix it with `VITE_`.

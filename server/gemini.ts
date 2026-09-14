@@ -1,7 +1,7 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { AnalyzeRequest, ArchitectureResult, GraphEdge, GraphNode } from "../shared/types.ts";
 
-const MODELS = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash"] as const;
+const MODELS = ["gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"] as const;
 const MAX_GRAPH_NODES = 36;
 
 function sleep(ms: number) {
@@ -270,13 +270,16 @@ async function generateWithModel(
   signal?: AbortSignal,
 ): Promise<string> {
   const isGemini3 = /gemini-3/i.test(model);
+  const isLite = /flash-lite/i.test(model);
   const response = await ai.models.generateContent({
     model,
     contents: prompt,
     config: {
       abortSignal: signal,
       responseMimeType: "application/json",
-      thinkingConfig: isGemini3 ? { thinkingLevel: ThinkingLevel.LOW } : undefined,
+      thinkingConfig: isGemini3
+        ? { thinkingLevel: isLite ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW }
+        : undefined,
     },
   });
   const text = response.text;
