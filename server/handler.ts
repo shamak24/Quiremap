@@ -152,7 +152,8 @@ export async function handleAnalyze(request: Request): Promise<Response> {
     }
     const code = typeof error === "object" && error && "code" in error ? String(error.code) : "GEMINI";
     if (code === "GEMINI") {
-      return fail("GEMINI", geminiUserMessage(error), errorStatus(error) === 429 ? 429 : 502);
+      const message = error instanceof Error ? error.message : geminiUserMessage(error);
+      return fail("GEMINI", message, errorStatus(error) === 429 ? 429 : 502);
     }
     return fail("INTERNAL", "Something went wrong while analyzing this repository.", 500);
   }

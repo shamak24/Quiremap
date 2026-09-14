@@ -167,6 +167,12 @@ The endpoint is throttled at **6 requests per IP per 10 minutes** (in-memory, pe
 3. Redeploy after saving env vars (they are not picked up by an already-built deployment).
 4. Smoke-check the function: open `https://your-app.vercel.app/api/analyze` in a browser. You should see JSON like `{ "ok": true, "hasGeminiKey": true }`. If `hasGeminiKey` is `false`, the key is not visible to the function.
 
+Gemini keys used on Vercel must allow **server** calls:
+
+- Application restrictions: **None** (HTTP referrer restrictions block serverless).
+- Paste **only** the key value — no quotes and no `GEMINI_API_KEY=` prefix.
+- After changing env vars, **redeploy**.
+
 The SPA rewrite in `vercel.json` skips `/api/*` so Vite does not swallow the function.
 
 ## Limits and privacy

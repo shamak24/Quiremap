@@ -8,6 +8,15 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function readGeminiApiKey(): string | undefined {
+  let raw = process.env.GEMINI_API_KEY?.trim();
+  if (!raw) return undefined;
+  raw = raw.replace(/^["']+|["']+$/g, "").trim();
+  raw = raw.replace(/^GEMINI_API_KEY\s*=\s*/i, "").trim();
+  raw = raw.replace(/^Bearer\s+/i, "").trim();
+  return raw || undefined;
+}
+
 export function errorStatus(error: unknown): number | undefined {
   if (error && typeof error === "object" && "status" in error) {
     const status = Number((error as { status: unknown }).status);
@@ -20,22 +29,62 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function geminiApiMessage(error: unknown): string {
+  const text = errorText(error);
+  try {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      const parsed = JSON.parse(text.slice(start, end + 1)) as {
+        error?: { message?: string; status?: string };
+        message?: string;
+      };
+      return parsed.error?.message || parsed.message || text;
+    }
+  } catch {
+    /* use raw text */
+  }
+  return text;
+}
+
+function isInvalidApiKey(status: number | undefined, message: string): boolean {
+  if (/API_KEY_INVALID|API key not valid|invalid api key|unregistered callers|FAILED_PRECONDITION.*key/i.test(message)) {
+    return true;
+  }
+  if (status === 400 || status === 401) {
+    return /api.?key/i.test(message);
+  }
+  return false;
+}
+
 export function geminiUserMessage(error: unknown): string {
   const status = errorStatus(error);
-  const text = errorText(error);
+  const text = geminiApiMessage(error);
+
+  if (/GEMINI_API_KEY is not configured/i.test(errorText(error))) {
+    return "This server has no Gemini API key. Set GEMINI_API_KEY in Vercel env (Production and Preview), then redeploy.";
+  }
   if (status === 503 || /high demand|UNAVAILABLE|overloaded/i.test(text)) {
     return "Gemini is busy right now (high demand). Wait a minute and try again.";
   }
-  if (status === 429 || /resource exhausted|quota|rate/i.test(text)) {
+  if (status === 429 || /resource exhausted|RESOURCE_EXHAUSTED|quota/i.test(text)) {
     return "The Gemini quota for this API key is exhausted. Check usage in Google AI Studio and try later.";
   }
-  if (status === 401 || status === 403 || /api key|invalid.*key|permission/i.test(text)) {
-    return "The Gemini API key was rejected. Create an AI Studio key and set GEMINI_API_KEY in .env.";
+  if (/referer|referrer|Requests from .* are blocked|ip address/i.test(text)) {
+    return "This Gemini key has HTTP-referrer or IP restrictions, which block Vercel. In AI Studio, set Application restrictions to None (or IP addresses, not HTTP referrers).";
   }
-  if (/GEMINI_API_KEY/i.test(text)) {
-    return "This server has no Gemini API key. Add GEMINI_API_KEY to .env, then restart the dev server.";
+  if (isInvalidApiKey(status, text)) {
+    return "Gemini rejected this API key. In Vercel, set GEMINI_API_KEY to an AI Studio key with no extra quotes or GEMINI_API_KEY= prefix, then redeploy.";
   }
-  return "The architecture model failed after a retry. Wait a moment and try again.";
+  if (status === 403 || /PERMISSION_DENIED/i.test(text)) {
+    return `Gemini denied the request (${text.slice(0, 180)}). The Generative Language API may be disabled for this key, or the model isn’t allowed.`;
+  }
+  if (status === 400) {
+    return `Gemini rejected the request: ${text.slice(0, 220)}`;
+  }
+  return text.length < 220
+    ? text
+    : "The architecture model failed after a retry. Wait a moment and try again.";
 }
 
 function extractJson(text: string): unknown {
@@ -251,7 +300,7 @@ export async function analyzeWithGemini(
   payload: AnalyzeRequest,
   signal?: AbortSignal,
 ): Promise<ArchitectureResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = readGeminiApiKey();
   if (!apiKey) {
     throw Object.assign(new Error("GEMINI_API_KEY is not configured"), { code: "GEMINI" as const });
   }
